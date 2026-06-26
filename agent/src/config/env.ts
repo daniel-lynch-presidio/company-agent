@@ -7,6 +7,11 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   OLLAMA_BASE_URL: z.string().default("http://localhost:11434"),
   OLLAMA_MODEL: z.string().default("qwen3.6:27b"),
+  GITHUB_TOKEN: z.string(),
+  GITHUB_ORG: z.string(),
+  MS_TENANT_ID: z.string(),
+  MS_CLIENT_ID: z.string(),
+  MS_CLIENT_SECRET: z.string(),
 });
 
 type Config = z.infer<typeof envSchema>;
@@ -25,6 +30,18 @@ export function initConfig(): Config {
 
   if (config.LLM_PROVIDER === "claude" && !config.ANTHROPIC_API_KEY) {
     throw new Error("ANTHROPIC_API_KEY required when LLM_PROVIDER=claude");
+  }
+
+  if (!config.GITHUB_TOKEN) {
+    throw new Error("GITHUB_TOKEN is required");
+  }
+
+  if (!config.GITHUB_ORG) {
+    throw new Error("GITHUB_ORG is required");
+  }
+
+  if (!config.MS_TENANT_ID || !config.MS_CLIENT_ID || !config.MS_CLIENT_SECRET) {
+    throw new Error("MS_TENANT_ID, MS_CLIENT_ID, and MS_CLIENT_SECRET are all required");
   }
 
   return config;
