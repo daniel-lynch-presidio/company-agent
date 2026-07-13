@@ -1,12 +1,24 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { getConfig } from "../config/env";
 import { getLLM } from "../config/llm";
 import { companyAgent } from "../agents/companyAgent";
 import { createGitHubTool } from "../tools/githubTool";
-import { createTeamsTool } from "../tools/teamsTool";
+// import { createTeamsTool } from "../tools/teamsTool";
 import { AskRequestSchema, type UserContext, type AgentResponse, type Citation } from "../types";
 
 const app = new Hono();
+
+// Enable CORS for the React frontend
+app.use(
+  "*",
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:3000"],
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+    exposeHeaders: ["Content-Type"],
+  })
+);
 
 app.get("/health", (c) => {
   return c.json({ status: "ok" });
@@ -47,11 +59,21 @@ app.post("/ask", async (c) => {
 
     (async () => {
       try {
-        const tools = [createGitHubTool(userContext), createTeamsTool(userContext)];
+        console.log(`[${responseSessionId}] Processing question: ${question}`);
+
+        const tools = [createGitHubTool(userContext),
+          //createTeamsTool(userContext)
+          ];
         const llm = getLLM();
 
+        console.log(`[${responseSessionId}] Starting agent with ${tools.length} tools`);
+
+        let chunkCount = 0;
         for await (const chunk of companyAgent(llm, tools, question)) {
           if (chunk) {
+            chunkCount++;
+            console.log(`[${responseSessionId}] Chunk ${chunkCount}: ${chunk.substring(0, 50)}...`);
+
             // Extract URLs from chunk
             const urlRegex = /URL:\s*(https?:\/\/[^\s]+)/g;
             const matches = chunk.matchAll(urlRegex);
@@ -68,6 +90,8 @@ app.post("/ask", async (c) => {
           }
         }
 
+        console.log(`[${responseSessionId}] Agent completed with ${chunkCount} chunks`);
+
         const citationsList: Citation[] = Array.from(citations.values()).map((c) => ({
           sourceType: c.url.includes("github") ? ("github" as const) : ("teams" as const),
           url: c.url,
@@ -75,6 +99,7 @@ app.post("/ask", async (c) => {
           excerpt: "",
         }));
 
+        console.log(`[${responseSessionId}] Sending done message with ${citationsList.length} citations`);
         await write({
           type: "done",
           citations: citationsList,
@@ -82,13 +107,23 @@ app.post("/ask", async (c) => {
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        await write({
-          type: "error",
-          error: errorMessage,
-          sessionId: responseSessionId,
-        });
+        console.error(`[${responseSessionId}] Error: ${errorMessage}`, error);
+        try {
+          await write({
+            type: "error",
+            error: errorMessage,
+            sessionId: responseSessionId,
+          });
+        } catch (writeError) {
+          console.error(`[${responseSessionId}] Failed to write error message:`, writeError);
+        }
       } finally {
-        await writer.close();
+        try {
+          await writer.close();
+          console.log(`[${responseSessionId}] Stream closed`);
+        } catch (closeError) {
+          console.error(`[${responseSessionId}] Error closing stream:`, closeError);
+        }
       }
     })();
 

@@ -1,4 +1,3 @@
-import React from 'react'
 import { Citation } from '../types/index'
 
 interface CitationListProps {

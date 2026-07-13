@@ -30,6 +30,7 @@ export function useAgent() {
       await streamAgentResponse(
         question,
         sessionId,
+        userId,
         token,
         (chunk) => {
           if (chunk.type === 'chunk' && chunk.content) {

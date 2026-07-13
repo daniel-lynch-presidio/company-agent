@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export interface UserContext {
   userId: string;
-  msToken: string;
+  msToken?: string;
   githubToken?: string;
 }
 
@@ -27,7 +27,7 @@ export const AskRequestSchema = z.object({
   question: z.string().min(1, "Question is required"),
   sessionId: z.string().optional(),
   userId: z.string().min(1, "userId is required"),
-  userToken: z.string().min(1, "userToken (MS Graph token) is required"),
+  userToken: z.string().min(1, "userToken (MS Graph token) is required").optional(),
   githubToken: z.string().optional(),
 });
 

@@ -1,10 +1,11 @@
-import { StreamingMessage, Citation } from '../types/index'
+import { StreamingMessage } from '../types/index'
 
 const API_URL = import.meta.env.VITE_AGENT_API_URL || 'http://localhost:3000'
 
 export async function streamAgentResponse(
   question: string,
   sessionId: string,
+  userId: string,
   token: string,
   onChunk: (message: StreamingMessage) => void,
   onError: (error: string) => void
@@ -19,6 +20,8 @@ export async function streamAgentResponse(
       body: JSON.stringify({
         question,
         sessionId,
+        userId,
+        userToken: token,
       }),
     })
 

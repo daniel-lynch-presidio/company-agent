@@ -32,8 +32,8 @@ export class GitHubRetriever extends BaseRetriever {
   lc_namespace = ["company-agent", "retrievers", "github"];
 
   private userContext: UserContext;
-  private org: string;
-  private serviceToken: string;
+  private org: string | undefined;
+  private serviceToken: string | undefined;
 
   constructor(userContext: UserContext, fields?: BaseRetrieverInput) {
     super(fields);
@@ -46,6 +46,12 @@ export class GitHubRetriever extends BaseRetriever {
   override async _getRelevantDocuments(
     query: string
   ): Promise<Document[]> {
+    if (!this.org || !this.serviceToken) {
+      throw new Error(
+        "GitHub credentials not configured. Set GITHUB_TOKEN and GITHUB_ORG in environment."
+      );
+    }
+
     const documents: Document[] = [];
 
     try {
